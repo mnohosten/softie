@@ -7,7 +7,7 @@ Softie takes a project intent (a brief describing what you want to build) and or
 ## Requirements
 
 - Node.js >= 20
-- Anthropic API key
+- [Claude Code](https://claude.com/claude-code) CLI installed and authenticated (uses your Claude subscription — no API key needed)
 
 ## Install
 
