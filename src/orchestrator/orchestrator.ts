@@ -2,6 +2,7 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { SoftieDir } from "../project/softie-dir.js";
 import type { AgentDefinition, PhasePlan } from "../project/state.js";
 import type { Logger } from "../utils/logger.js";
+import type { WsHub } from "../server/ws-hub.js";
 import { toSdkAgents } from "../meta/team-generator.js";
 import { runMilestoneCheckIn, updateMilestoneStatus } from "./milestone.js";
 import * as display from "../utils/display.js";
@@ -90,7 +91,8 @@ export async function runProjectOrchestrator(
   softieDir: SoftieDir,
   agents: AgentDefinition[],
   plan: PhasePlan,
-  logger: Logger
+  logger: Logger,
+  wsHub?: WsHub
 ): Promise<void> {
   display.header("Project Execution");
 
@@ -110,7 +112,8 @@ export async function runProjectOrchestrator(
         const { approved, feedback } = await runMilestoneCheckIn(
           milestone,
           softieDir,
-          logger
+          logger,
+          wsHub
         );
 
         if (!approved) {
@@ -292,7 +295,7 @@ ${contextSummary || "No context files yet. If this is the first implementation p
     (m) => m.status === "pending"
   );
   if (finalMilestone) {
-    await runMilestoneCheckIn(finalMilestone, softieDir, logger);
+    await runMilestoneCheckIn(finalMilestone, softieDir, logger, wsHub);
     updateMilestoneStatus(softieDir, finalMilestone.id, "completed");
   }
 

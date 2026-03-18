@@ -2,8 +2,10 @@ import { query } from "@anthropic-ai/claude-agent-sdk";
 import type { SoftieDir } from "../project/softie-dir.js";
 import type { Milestone } from "../project/state.js";
 import type { Logger } from "../utils/logger.js";
+import type { WsHub } from "../server/ws-hub.js";
 import * as display from "../utils/display.js";
 import { interactiveToolHandler } from "../utils/input.js";
+import { createUiToolHandler } from "../server/milestone-bridge.js";
 
 const MILESTONE_SYSTEM_PROMPT = `You are the Project Director presenting a milestone review to the project investor (the user).
 
@@ -64,7 +66,8 @@ Therefore: put your ENTIRE presentation, summary, and questions INTO the "questi
 export async function runMilestoneCheckIn(
   milestoneData: Milestone,
   softieDir: SoftieDir,
-  logger: Logger
+  logger: Logger,
+  wsHub?: WsHub
 ): Promise<{ approved: boolean; feedback: string }> {
   display.milestone(milestoneData.name);
 
@@ -97,7 +100,7 @@ This is a dialogue - expect multiple rounds of questions and feedback. When the 
       ],
       permissionMode: "bypassPermissions",
       allowDangerouslySkipPermissions: true,
-      canUseTool: interactiveToolHandler,
+      canUseTool: wsHub != null ? createUiToolHandler(wsHub) : interactiveToolHandler,
       cwd: softieDir.projectDir,
       maxTurns: 30,
     },

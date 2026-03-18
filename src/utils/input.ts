@@ -34,7 +34,7 @@ interface AskQuestion {
  * Extract displayable text from AskUserQuestion input.
  * The SDK sends { questions: [...] } with structured question objects.
  */
-function extractQuestion(input: Record<string, unknown>): string {
+export function extractQuestion(input: Record<string, unknown>): string {
   // Handle { questions: [...] } array format (SDK standard)
   if (input.questions && Array.isArray(input.questions)) {
     const parts: string[] = [];

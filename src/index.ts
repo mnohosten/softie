@@ -10,6 +10,7 @@ import { runProjectOrchestrator } from "./orchestrator/orchestrator.js";
 import { runMilestoneCheckIn, updateMilestoneStatus } from "./orchestrator/milestone.js";
 import { loadConfig, readBriefFile, readStdin } from "./project/config.js";
 import * as display from "./utils/display.js";
+import { startServer } from "./server/index.js";
 
 const program = new Command();
 
@@ -18,12 +19,42 @@ program
   .description("Universal Project Orchestrator")
   .version("0.1.0");
 
-// Main command: softie "<intent>" or softie --file brief.md or stdin pipe
-program
+// Default action: open Electron desktop app
+program.action(async () => {
+  const { spawn } = await import("node:child_process");
+  const { fileURLToPath } = await import("node:url");
+  const { dirname, join, resolve: res } = await import("node:path");
+
+  const packageRoot = res(dirname(fileURLToPath(import.meta.url)), "..");
+  const electronBin = join(packageRoot, "node_modules", ".bin", "electron");
+
+  const child = spawn(electronBin, [packageRoot, process.cwd()], {
+    stdio: "inherit",
+    detached: false,
+  });
+
+  child.on("error", (err) => {
+    display.error(`Failed to launch Electron: ${err.message}`);
+    display.info("Make sure you've run: npm install && npm run build:electron");
+    process.exit(1);
+  });
+
+  child.on("exit", (code) => {
+    process.exit(code ?? 0);
+  });
+});
+
+// ── CLI subcommand group ──────────────────────────────────────────────────────
+
+const cli = program
+  .command("cli")
+  .description("Run Softie from the command line");
+
+// softie cli "<intent>"
+cli
   .argument("[intent]", "Project intent / description")
   .option("-f, --file <path>", "Read project brief from a file")
   .action(async (intent: string | undefined, opts: { file?: string }) => {
-    // Resolve intent from: 1) --file flag, 2) stdin pipe, 3) positional argument
     const stdinContent = readStdin();
     let resolvedIntent: string;
 
@@ -34,7 +65,7 @@ program
     } else if (intent) {
       resolvedIntent = intent;
     } else {
-      program.help();
+      cli.help();
       return;
     }
 
@@ -42,14 +73,12 @@ program
     const projectDir = process.cwd();
     const softieDir = new SoftieDir(projectDir);
 
-    // Initialize .softie/
     if (softieDir.exists) {
       display.warn(".softie/ already exists in this directory.");
-      display.info("Use 'softie resume' to continue or delete .softie/ to start fresh.");
+      display.info("Use 'softie cli resume' to continue or delete .softie/ to start fresh.");
       process.exit(1);
     }
 
-    // Load preferences from softie.config.yml/yaml/md
     const config = loadConfig(projectDir);
     if (config) {
       display.info(`Loaded preferences from ${config.source}`);
@@ -63,26 +92,22 @@ program
     display.divider();
 
     try {
-      // Phase 0: Meta-orchestrator analyzes intent and creates team
       await runMetaOrchestrator(resolvedIntent, softieDir, logger, config?.content);
 
-      // Validate and load the generated team
-      const { team, agents, plan } = await validateAndIndexTeam(softieDir, logger);
+      const { team: _team, agents, plan } = await validateAndIndexTeam(softieDir, logger);
 
-      // Milestone 0: Investor approves team and plan
       const m0 = plan.milestones.find((m) => m.id === "m0");
       if (m0) {
         const { approved } = await runMilestoneCheckIn(m0, softieDir, logger);
         if (!approved) {
           display.warn("Team not approved. Project paused.");
-          display.info("Modify .softie/team/ and run 'softie resume'.");
+          display.info("Modify .softie/team/ and run 'softie cli resume'.");
           softieDir.updateMetadata({ status: "paused" });
           process.exit(0);
         }
         updateMilestoneStatus(softieDir, "m0", "completed");
       }
 
-      // Phase 1-N: Project orchestrator executes with the team
       await runProjectOrchestrator(softieDir, agents, plan, logger);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -93,8 +118,8 @@ program
     }
   });
 
-// Resume command
-program
+// softie cli resume
+cli
   .command("resume")
   .description("Resume a paused project")
   .action(async () => {
@@ -103,7 +128,7 @@ program
     const softieDir = new SoftieDir(projectDir);
 
     if (!softieDir.exists) {
-      display.error("No .softie/ directory found. Start a project first with: softie \"<intent>\"");
+      display.error("No .softie/ directory found. Start a project first with: softie cli \"<intent>\"");
       process.exit(1);
     }
 
@@ -119,9 +144,7 @@ program
 
     try {
       if (metadata.status === "analyzing" || metadata.status === "initializing") {
-        // Re-run meta-orchestrator
         await runMetaOrchestrator(metadata.intent, softieDir, logger);
-        // Re-read metadata after meta-orchestrator updates it
         const updated = softieDir.getMetadata();
         if (updated) metadata.status = updated.status;
       }
@@ -149,7 +172,6 @@ program
         metadata.status === "milestone-review"
       ) {
         const { agents, plan } = await validateAndIndexTeam(softieDir, logger);
-        // Filter to remaining phases
         const remainingPlan = {
           ...plan,
           phases: plan.phases.filter(
@@ -171,8 +193,8 @@ program
     }
   });
 
-// Status command
-program
+// softie cli status
+cli
   .command("status")
   .description("Show current project status")
   .action(async () => {
@@ -236,6 +258,23 @@ program
         console.log(`  ${statusIcon} ${m.name} (${m.status})`);
       }
     }
+  });
+
+// softie cli ui
+cli
+  .command("ui")
+  .description("Start the web UI dashboard")
+  .option("-p, --port <port>", "Port to listen on", "3847")
+  .option("--dev", "Development mode (no static file serving)", false)
+  .action(async (opts: { port: string; dev: boolean }) => {
+    const projectDir = process.cwd();
+    const port = parseInt(opts.port, 10);
+
+    display.showLogo();
+    display.info(`Starting Softie Dashboard on port ${port}...`);
+    if (opts.dev) display.info("Development mode: expecting Vite dev server on port 3848");
+
+    await startServer({ projectDir, port, isDev: opts.dev });
   });
 
 program.parse();

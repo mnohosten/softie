@@ -8,6 +8,8 @@ import type {
   Progress,
   Decision,
   AgentDefinition,
+  TaskApproval,
+  ApprovalState,
 } from "./state.js";
 
 const SOFTIE_DIR = ".softie";
@@ -294,5 +296,59 @@ export class SoftieDir {
 
   saveSessionId(sessionId: string): void {
     this.writeJson("state/orchestrator-session.json", { sessionId });
+  }
+
+  // --- Tasks / Approval ---
+
+  getTasks(): TaskApproval[] {
+    return this.readJson<TaskApproval[]>("state/tasks.json") || [];
+  }
+
+  writeTasks(tasks: TaskApproval[]): void {
+    this.writeJson("state/tasks.json", tasks);
+  }
+
+  getApprovalState(): ApprovalState {
+    return (
+      this.readJson<ApprovalState>("state/approval.json") || {
+        mode: "granular",
+        braveMode: false,
+      }
+    );
+  }
+
+  writeApprovalState(state: ApprovalState): void {
+    this.writeJson("state/approval.json", state);
+  }
+
+  // --- Snapshots (approved versions for diff) ---
+
+  saveSnapshot(relativePath: string, content: string): void {
+    const snapshotsDir = join(this.root, "state", "snapshots");
+    mkdirSync(snapshotsDir, { recursive: true });
+    // Flatten the path for storage
+    const key = relativePath.replace(/\//g, "__").replace(/\\/g, "__");
+    writeFileSync(join(snapshotsDir, key), content);
+  }
+
+  getSnapshot(relativePath: string): string | null {
+    const key = relativePath.replace(/\//g, "__").replace(/\\/g, "__");
+    const snapshotPath = join(this.root, "state", "snapshots", key);
+    if (!existsSync(snapshotPath)) return null;
+    return readFileSync(snapshotPath, "utf-8");
+  }
+
+  // --- File listing ---
+
+  listFiles(subDir: string): Array<{ path: string; name: string; isDir: boolean }> {
+    const targetDir = subDir ? join(this.root, subDir) : this.root;
+    if (!existsSync(targetDir)) return [];
+
+    const entries = readdirSync(targetDir, { withFileTypes: true });
+    return entries.map((entry) => ({
+      path: subDir ? `${subDir}/${entry.name}` : entry.name,
+      name: entry.name,
+      isDir: entry.isDirectory(),
+    }));
   }
 }

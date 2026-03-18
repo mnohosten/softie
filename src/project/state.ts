@@ -136,3 +136,44 @@ export const DecisionSchema = z.object({
 });
 
 export type Decision = z.infer<typeof DecisionSchema>;
+
+// --- Task Approval ---
+
+export const TaskApprovalStatusSchema = z.enum([
+  "draft",
+  "pending-review",
+  "approved",
+  "in-progress",
+  "completed",
+  "rejected",
+]);
+
+export type TaskApprovalStatus = z.infer<typeof TaskApprovalStatusSchema>;
+
+export const TaskApprovalSchema = z.object({
+  id: z.string(),
+  phaseId: z.string(),
+  title: z.string(),
+  description: z.string(),
+  assignedAgent: z.string().optional(),
+  status: TaskApprovalStatusSchema,
+  revision: z.number().default(0),
+  reviewComment: z.string().optional(),
+  rejectionReason: z.string().optional(),
+  modifiedByAgent: z.boolean().default(false),
+  chatThreadId: z.string().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export type TaskApproval = z.infer<typeof TaskApprovalSchema>;
+
+export const ApprovalModeSchema = z.enum(["granular", "phase", "brave"]);
+export type ApprovalMode = z.infer<typeof ApprovalModeSchema>;
+
+export const ApprovalStateSchema = z.object({
+  mode: ApprovalModeSchema.default("granular"),
+  braveMode: z.boolean().default(false),
+});
+
+export type ApprovalState = z.infer<typeof ApprovalStateSchema>;

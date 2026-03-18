@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import { eventBus } from "../core/event-bus.js";
 
 const LOGO = `
   ███████  ██████  ███████ ████████ ██ ███████
@@ -37,11 +38,18 @@ export function error(text: string): void {
   console.log(chalk.red("✗ ") + text);
 }
 
-export function phase(name: string, description: string): void {
+export function phase(name: string, description: string, phaseId = ""): void {
   console.log();
   console.log(chalk.bold.magenta(`▶ Phase: ${name}`));
   console.log(chalk.gray(`  ${description}`));
   console.log();
+  eventBus.emit_event({
+    type: "phase:started",
+    phaseId,
+    phaseName: name,
+    description,
+    timestamp: new Date().toISOString(),
+  });
 }
 
 export function milestone(name: string): void {
@@ -53,6 +61,12 @@ export function milestone(name: string): void {
 
 export function agent(name: string, action: string): void {
   console.log(chalk.cyan(`  [${name}] `) + chalk.gray(action));
+  eventBus.emit_event({
+    type: "agent:activity",
+    agentName: name,
+    action,
+    timestamp: new Date().toISOString(),
+  });
 }
 
 /**
@@ -177,6 +191,11 @@ export function parallelLaunch(agentNames: string[]): void {
     chalk.bold.blue(`  ⟁ Parallel launch: `) +
       agentNames.map((n) => chalk.cyan(n)).join(chalk.gray(" | "))
   );
+  eventBus.emit_event({
+    type: "parallel:launch",
+    agentNames,
+    timestamp: new Date().toISOString(),
+  });
 }
 
 export function taskStarted(taskId: string, agentName: string): void {

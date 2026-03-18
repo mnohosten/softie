@@ -3,23 +3,46 @@
   "version": "0.1.0",
   "description": "Universal project orchestrator powered by Claude Agent SDK",
   "type": "module",
+  "main": "dist-electron/main.js",
   "bin": {
     "softie": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",
+    "build:ui": "cd ui && npm install && npm run build",
+    "build:electron": "tsc -p tsconfig.electron.json && echo '{\"type\":\"commonjs\"}' > dist-electron/package.json",
+    "build:all": "npm run build && npm run build:ui && npm run build:electron",
     "dev": "tsc --watch",
-    "start": "node dist/index.js"
+    "dev:ui": "cd ui && npm run dev",
+    "electron:dev": "concurrently \"npm run dev\" \"npm run dev:ui\" \"npm run build:electron && ELECTRON_DEV=true electron .\"",
+    "start": "node dist/index.js",
+    "dist": "npm run build:all && electron-builder"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.2.0",
+    "@fastify/cors": "^10.0.2",
+    "@fastify/static": "^8.1.1",
+    "@fastify/websocket": "^11.0.2",
     "chalk": "^5.4.1",
+    "chokidar": "^4.0.3",
     "commander": "^13.1.0",
-"zod": "^4.0.0"
+    "fastify": "^5.3.2",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
+    "concurrently": "^9",
+    "electron": "^34",
+    "electron-builder": "^25",
     "typescript": "^5.8.3"
+  },
+  "build": {
+    "appId": "com.softie.app",
+    "productName": "Softie",
+    "directories": { "output": "release" },
+    "files": ["dist/**/*", "dist-electron/**/*", "ui/dist/**/*", "node_modules/**/*", "package.json"],
+    "mac": { "category": "public.app-category.developer-tools", "target": ["dmg"] },
+    "postinstall": "electron-builder install-app-deps"
   },
   "engines": {
     "node": ">=20"
