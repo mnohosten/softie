@@ -179,10 +179,16 @@ export function teamDisplay(
   console.log();
 }
 
-export function sdkMessage(type: string, content: string): void {
+export function sdkMessage(agentName: string, content: string): void {
   const truncated =
     content.length > 200 ? content.slice(0, 200) + "..." : content;
-  console.log(chalk.gray(`  [${type}] ${truncated}`));
+  console.log(chalk.gray(`  [${agentName}] ${truncated}`));
+  eventBus.emit_event({
+    type: "sdk:text",
+    agentName,
+    text: content,
+    timestamp: new Date().toISOString(),
+  });
 }
 
 export function parallelLaunch(agentNames: string[]): void {

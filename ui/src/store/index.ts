@@ -63,7 +63,7 @@ interface SoftieStore {
   // Actions — tabs
   openTab: (tab: Omit<Tab, "id">) => void;
   closeTab: (id: string) => void;
-  setActiveTab: (id: string) => void;
+  setActiveTab: (id: string | null) => void;
   updateTabContent: (id: string, content: string) => void;
   markTabClean: (id: string) => void;
 

@@ -165,6 +165,8 @@ export async function runProjectOrchestrator(
         : "";
 
       let attemptSuccess = false;
+      // Map tool_use_id → agent name for labeling sub-agent messages
+      const agentCallMap = new Map<string, string>();
 
       for await (const message of query({
         prompt: `Execute phase "${phase.name}" of the project.
@@ -207,31 +209,45 @@ ${contextSummary || "No context files yet. If this is the first implementation p
         },
       })) {
         if (message.type === "assistant") {
-          // Detect parallel agent launches
-          const agentCalls = message.message.content.filter(
-            (b: { type: string; name?: string }) => b.type === "tool_use" && b.name === "Agent"
-          );
-          if (agentCalls.length > 1) {
-            const names = agentCalls.map((b: { type: string; input?: unknown }) => {
-              if (b.type !== "tool_use") return "agent";
-              const inp = b.input as Record<string, unknown>;
-              return (inp.subagent_type as string) || (inp.description as string) || "agent";
-            });
-            display.parallelLaunch(names);
+          // Determine which agent sent this message
+          const agentLabel = message.parent_tool_use_id
+            ? (agentCallMap.get(message.parent_tool_use_id) || "sub-agent")
+            : "Orchestrator";
+
+          // Detect parallel agent launches (only from orchestrator level)
+          if (!message.parent_tool_use_id) {
+            const agentCalls = message.message.content.filter(
+              (b: { type: string; name?: string }) => b.type === "tool_use" && b.name === "Agent"
+            );
+            if (agentCalls.length > 1) {
+              const names = agentCalls.map((b: { type: string; input?: unknown }) => {
+                if (b.type !== "tool_use") return "agent";
+                const inp = b.input as Record<string, unknown>;
+                return (inp.subagent_type as string) || (inp.description as string) || "agent";
+              });
+              display.parallelLaunch(names);
+            }
           }
 
           for (const block of message.message.content) {
             if (block.type === "text" && block.text.trim()) {
-              display.sdkMessage("orchestrator", block.text);
+              display.sdkMessage(agentLabel, block.text);
             }
             if (block.type === "tool_use") {
               const input = (typeof block.input === "object" && block.input !== null
                 ? block.input
                 : {}) as Record<string, unknown>;
               display.agent(
-                "Orchestrator",
+                agentLabel,
                 display.formatToolUse(block.name, input)
               );
+              // Track Agent tool calls so sub-agent messages can be labeled correctly
+              if (block.name === "Agent") {
+                const agentType = (input.subagent_type as string)
+                  || (input.description as string)
+                  || "sub-agent";
+                agentCallMap.set(block.id, agentType);
+              }
             }
           }
         }

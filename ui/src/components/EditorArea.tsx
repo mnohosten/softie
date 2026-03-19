@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Editor, { DiffEditor } from "@monaco-editor/react";
 import { useSoftieStore } from "../store/index.ts";
 import type { Tab } from "../types.ts";
-import { ActivityDashboard } from "./ActivityDashboard.tsx";
+import { LiveLogPanel } from "./LiveLogPanel.tsx";
 import { MilestoneReviewPanel } from "./MilestoneReviewPanel.tsx";
 
 const MONACO_OPTIONS = {
@@ -399,22 +399,42 @@ interface EditorAreaProps {
   send: (msg: Record<string, unknown>) => void;
 }
 
+function homeTabLabel(status: string | undefined, isRunning: boolean): string {
+  if (status === "team-review") return "Team Review";
+  if (status === "milestone-review") return "Milestone Review";
+  if (status === "paused") return "Paused";
+  if (status === "failed") return "Failed";
+  if (isRunning) return "Live Log";
+  return "Overview";
+}
+
 export function EditorArea({ send }: EditorAreaProps) {
-  const { openTabs, activeTabId, setActiveTab, closeTab, updateTabContent, markTabClean, metadata, projectExists } =
+  const { openTabs, activeTabId, setActiveTab, closeTab, updateTabContent, markTabClean, metadata, projectExists, isRunning } =
     useSoftieStore();
 
-  const activeTab = openTabs.find((t) => t.id === activeTabId) || null;
   const status = metadata?.status;
-  const showTeamReview = !activeTab && status === "team-review";
-  const showMilestoneReview = !activeTab && status === "milestone-review";
-  const showPaused = !activeTab && status === "paused";
-  const showFailed = !activeTab && status === "failed";
+  const showHomeTab = projectExists || isRunning || !!status;
+  // activeTabId === null means home tab is active
+  const activeTab = openTabs.find((t) => t.id === activeTabId) || null;
+  const homeIsActive = activeTabId === null;
+  const showTabBar = showHomeTab || openTabs.length > 0;
 
   return (
     <div className="editor-area">
       {/* Tab bar */}
-      {openTabs.length > 0 && (
+      {showTabBar && (
         <div className="tab-bar">
+          {/* Permanent home tab */}
+          {showHomeTab && (
+            <div
+              className={`tab tab-home ${homeIsActive ? "active" : ""}`}
+              onClick={() => setActiveTab(null)}
+              title="Back to main view"
+            >
+              <span className="tab-home-icon">⟁</span>
+              <span className="tab-name">{homeTabLabel(status, isRunning)}</span>
+            </div>
+          )}
           {openTabs.map((tab) => (
             <TabItem
               key={tab.id}
@@ -427,8 +447,8 @@ export function EditorArea({ send }: EditorAreaProps) {
         </div>
       )}
 
-      {/* Editor content — condition chain */}
-      {activeTab ? (
+      {/* Editor content — home tab or file tab */}
+      {!homeIsActive && activeTab ? (
         <div className="editor-container">
           <EditorContent
             key={activeTab.id}
@@ -437,16 +457,16 @@ export function EditorArea({ send }: EditorAreaProps) {
             onSaved={() => markTabClean(activeTab.id)}
           />
         </div>
-      ) : showTeamReview ? (
+      ) : status === "team-review" ? (
         <TeamReviewPanel />
-      ) : showMilestoneReview ? (
+      ) : status === "milestone-review" ? (
         <MilestoneReviewPanel send={send} />
-      ) : showPaused ? (
+      ) : status === "paused" ? (
         <PausedPanel />
-      ) : showFailed ? (
+      ) : status === "failed" ? (
         <FailedPanel />
-      ) : projectExists ? (
-        <ActivityDashboard />
+      ) : projectExists || isRunning ? (
+        <LiveLogPanel />
       ) : (
         <div className="editor-empty">
           <div className="editor-empty-logo">⟁</div>
