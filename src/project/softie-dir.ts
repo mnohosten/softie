@@ -10,6 +10,9 @@ import type {
   AgentDefinition,
   TaskApproval,
   ApprovalState,
+  Spec,
+  Task,
+  Sprint,
 } from "./state.js";
 
 const SOFTIE_DIR = ".softie";
@@ -40,6 +43,8 @@ export class SoftieDir {
       join(this.root, "logs"),
       join(this.root, "artifacts"),
       join(this.root, "context"),
+      join(this.root, "specs"),
+      join(this.root, "board"),
     ];
 
     for (const dir of dirs) {
@@ -336,6 +341,63 @@ export class SoftieDir {
     const snapshotPath = join(this.root, "state", "snapshots", key);
     if (!existsSync(snapshotPath)) return null;
     return readFileSync(snapshotPath, "utf-8");
+  }
+
+  // --- Specs (v2) ---
+
+  getSpecs(): Spec[] {
+    return this.readJson<Spec[]>("specs/index.json") || [];
+  }
+
+  writeSpecs(specs: Spec[]): void {
+    this.writeJson("specs/index.json", specs);
+  }
+
+  getSpec(id: string): Spec | null {
+    const specs = this.getSpecs();
+    return specs.find((s) => s.id === id) || null;
+  }
+
+  writeSpecContent(filePath: string, content: string): void {
+    const specsDir = join(this.root, "specs");
+    mkdirSync(specsDir, { recursive: true });
+    writeFileSync(join(specsDir, filePath), content);
+  }
+
+  readSpecContent(filePath: string): string | null {
+    const fullPath = join(this.root, "specs", filePath);
+    if (!existsSync(fullPath)) return null;
+    return readFileSync(fullPath, "utf-8");
+  }
+
+  // --- Board: Tasks v2 ---
+
+  getBoardTasks(): Task[] {
+    return this.readJson<Task[]>("board/tasks.json") || [];
+  }
+
+  writeBoardTasks(tasks: Task[]): void {
+    this.writeJson("board/tasks.json", tasks);
+  }
+
+  getBoardTask(id: string): Task | null {
+    const tasks = this.getBoardTasks();
+    return tasks.find((t) => t.id === id) || null;
+  }
+
+  // --- Sprints ---
+
+  getSprints(): Sprint[] {
+    return this.readJson<Sprint[]>("board/sprints.json") || [];
+  }
+
+  writeSprints(sprints: Sprint[]): void {
+    this.writeJson("board/sprints.json", sprints);
+  }
+
+  getSprint(id: string): Sprint | null {
+    const sprints = this.getSprints();
+    return sprints.find((s) => s.id === id) || null;
   }
 
   // --- File listing ---

@@ -18,7 +18,16 @@ export type SoftieEvent =
   | { type: "chat:done"; threadId: string; cost: number; timestamp: string }
   | { type: "sdk:text"; agentName: string; text: string; timestamp: string }
   | { type: "sdk:tool"; agentName: string; toolName: string; summary: string; timestamp: string }
-  | { type: "milestone:question"; question: string; timestamp: string };
+  | { type: "milestone:question"; question: string; timestamp: string }
+  | { type: "spec:created"; specId: string; title: string; timestamp: string }
+  | { type: "spec:updated"; specId: string; timestamp: string }
+  | { type: "spec:status"; specId: string; status: string; timestamp: string }
+  | { type: "board:task:created"; taskId: string; title: string; timestamp: string }
+  | { type: "board:task:updated"; taskId: string; timestamp: string }
+  | { type: "board:task:status"; taskId: string; status: string; timestamp: string }
+  | { type: "sprint:created"; sprintId: string; name: string; timestamp: string }
+  | { type: "sprint:updated"; sprintId: string; timestamp: string }
+  | { type: "sprint:status"; sprintId: string; status: string; timestamp: string };
 
 class SoftieEventBus extends EventEmitter {
   emit_event(event: SoftieEvent): void {

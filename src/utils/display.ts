@@ -12,7 +12,7 @@ const LOGO = `
 export function showLogo(): void {
   console.log(chalk.cyan(LOGO));
   console.log(
-    chalk.gray("  Universal Project Orchestrator v0.1.0\n")
+    chalk.gray("  Spec-Driven Development v2.0.0\n")
   );
 }
 

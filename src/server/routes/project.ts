@@ -3,8 +3,10 @@ import type { SoftieDir } from "../../project/softie-dir.js";
 import type { WsHub } from "../ws-hub.js";
 import { Logger } from "../../utils/logger.js";
 import { runMetaOrchestrator } from "../../meta/meta-orchestrator.js";
+import { runSpecOrchestrator } from "../../spec/spec-orchestrator.js";
 import { validateAndIndexTeam } from "../../meta/team-generator.js";
 import { runProjectOrchestrator } from "../../orchestrator/orchestrator.js";
+import { runExecutionOrchestrator } from "../../agent/execution-orchestrator.js";
 import { updateMilestoneStatus } from "../../orchestrator/milestone.js";
 import { eventBus } from "../../core/event-bus.js";
 
@@ -115,6 +117,73 @@ export async function projectRoutes(
     })();
 
     return { started: true };
+  });
+
+  // POST /api/project/start-v2 — initialize with spec-driven workflow
+  fastify.post<{ Body: StartBody }>("/api/project/start-v2", async (request, reply) => {
+    if (softieDir.exists) {
+      return reply.code(409).send({ error: "Project already exists. Delete .softie/ to start fresh." });
+    }
+
+    const { intent, preferences } = request.body;
+    if (!intent?.trim()) {
+      return reply.code(400).send({ error: "intent is required" });
+    }
+
+    const metadata = softieDir.init(intent.trim(), preferences);
+    const logger = new Logger(softieDir.root);
+
+    eventBus.emit_event({
+      type: "project:status",
+      status: "initializing",
+      timestamp: new Date().toISOString(),
+    });
+
+    // Run spec orchestrator in background
+    (async () => {
+      try {
+        await runSpecOrchestrator(intent.trim(), softieDir, logger, preferences);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        logger.error("ui-project-start-v2", message);
+        eventBus.emit_event({
+          type: "project:status",
+          status: "failed",
+          timestamp: new Date().toISOString(),
+        });
+      }
+    })();
+
+    return { started: true, projectId: metadata.id, workflow: "sdd" };
+  });
+
+  // POST /api/project/execute-v2 — run the task-based execution orchestrator
+  fastify.post("/api/project/execute-v2", async (_request, reply) => {
+    if (!softieDir.exists) {
+      return reply.code(404).send({ error: "No project found" });
+    }
+
+    const metadata = softieDir.getMetadata();
+    if (!metadata) return reply.code(404).send({ error: "No project metadata" });
+
+    const logger = new Logger(softieDir.root);
+
+    // Run async
+    (async () => {
+      try {
+        await runExecutionOrchestrator(softieDir, logger);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        logger.error("execution-v2", message);
+        eventBus.emit_event({
+          type: "project:status",
+          status: "failed",
+          timestamp: new Date().toISOString(),
+        });
+      }
+    })();
+
+    return { started: true, workflow: "task-based" };
   });
 
   // DELETE /api/project — reset project (delete .softie/)

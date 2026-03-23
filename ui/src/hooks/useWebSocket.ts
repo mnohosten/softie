@@ -1,6 +1,8 @@
 import { useEffect, useRef, useCallback } from "react";
 import { useSoftieStore } from "../store/index.ts";
 import type { WsMessage, SoftieEvent } from "../types.ts";
+import { eventToNotification } from "../notifications/event-to-notification.ts";
+import { randomId } from "../utils.ts";
 
 const WS_URL =
   typeof window !== "undefined"
@@ -12,7 +14,7 @@ const RECONNECT_DELAY = 2000;
 export function useWebSocket() {
   const ws = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { setWsConnected, addActivity, appendChatDelta, finishChatStream, setProjectState, setMilestoneQuestion } =
+  const { setWsConnected, addActivity, addNotification, appendChatDelta, finishChatStream, setProjectState, setMilestoneQuestion } =
     useSoftieStore();
 
   const connect = useCallback(() => {
@@ -53,12 +55,25 @@ export function useWebSocket() {
 
     if (msg.type === "milestone:question") {
       setMilestoneQuestion(msg.question);
+      addNotification({
+        id: randomId(),
+        title: "Milestone question",
+        description: msg.question.slice(0, 120),
+        severity: "warning",
+        read: false,
+        timestamp: msg.timestamp,
+        sourceEventType: "milestone:question",
+        action: { viewId: "dashboard" },
+      });
       return;
     }
 
     if (msg.type === "event") {
       const event = msg.data as SoftieEvent;
       addActivity(event);
+
+      const notification = eventToNotification(event);
+      if (notification) addNotification(notification);
 
       // Handle specific events
       if (event.type === "chat:delta") {
@@ -91,6 +106,9 @@ export function useWebSocket() {
         progress: data.progress,
         tasks: data.tasks || [],
         approvalState: data.approvalState,
+        specs: data.specs || [],
+        boardTasks: data.boardTasks || [],
+        sprints: data.sprints || [],
         exists: data.exists,
       });
     } catch {

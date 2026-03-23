@@ -1,7 +1,7 @@
 {
   "name": "softie",
-  "version": "0.1.0",
-  "description": "Universal project orchestrator powered by Claude Agent SDK",
+  "version": "2.0.0",
+  "description": "Spec-Driven Development tool powered by Claude Agent SDK",
   "type": "module",
   "main": "dist-electron/main.js",
   "bin": {

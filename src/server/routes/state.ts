@@ -19,6 +19,9 @@ export async function stateRoutes(
     const progress = softieDir.getProgress();
     const tasks = softieDir.getTasks();
     const approvalState = softieDir.getApprovalState();
+    const specs = softieDir.getSpecs();
+    const boardTasks = softieDir.getBoardTasks();
+    const sprints = softieDir.getSprints();
 
     return {
       metadata,
@@ -27,6 +30,9 @@ export async function stateRoutes(
       progress,
       tasks,
       approvalState,
+      specs,
+      boardTasks,
+      sprints,
       exists: true,
     };
   });

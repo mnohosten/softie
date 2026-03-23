@@ -89,12 +89,17 @@ export type PhasePlan = z.infer<typeof PhasePlanSchema>;
 export const ProjectStatusSchema = z.enum([
   "initializing",
   "analyzing",
-  "team-review",
+  "spec-review",
+  "planning",
+  "ready",
   "executing",
-  "milestone-review",
+  "sprint-review",
   "completed",
   "failed",
   "paused",
+  // v1 compat
+  "team-review",
+  "milestone-review",
 ]);
 
 export type ProjectStatus = z.infer<typeof ProjectStatusSchema>;
@@ -177,3 +182,100 @@ export const ApprovalStateSchema = z.object({
 });
 
 export type ApprovalState = z.infer<typeof ApprovalStateSchema>;
+
+// --- Spec (v2) ---
+
+export const SpecTypeSchema = z.enum([
+  "product",
+  "technical",
+  "architecture",
+  "api",
+  "ui",
+]);
+export type SpecType = z.infer<typeof SpecTypeSchema>;
+
+export const SpecStatusSchema = z.enum([
+  "draft",
+  "review",
+  "approved",
+  "implemented",
+]);
+export type SpecStatus = z.infer<typeof SpecStatusSchema>;
+
+export const SpecSectionSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  content: z.string(),
+  order: z.number(),
+});
+export type SpecSection = z.infer<typeof SpecSectionSchema>;
+
+export const SpecSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  type: SpecTypeSchema,
+  status: SpecStatusSchema.default("draft"),
+  sections: z.array(SpecSectionSchema).default([]),
+  filePath: z.string(), // relative to .softie/specs/
+  linkedTaskIds: z.array(z.string()).default([]),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type Spec = z.infer<typeof SpecSchema>;
+
+// --- Task v2 ---
+
+export const TaskStatusSchema = z.enum([
+  "backlog",
+  "todo",
+  "in-progress",
+  "review",
+  "done",
+  "blocked",
+  "rejected",
+]);
+export type TaskStatus = z.infer<typeof TaskStatusSchema>;
+
+export const TaskPrioritySchema = z.enum(["p0", "p1", "p2"]);
+export type TaskPriority = z.infer<typeof TaskPrioritySchema>;
+
+export const TaskComplexitySchema = z.enum(["small", "medium", "large"]);
+export type TaskComplexity = z.infer<typeof TaskComplexitySchema>;
+
+export const TaskSchema = z.object({
+  id: z.string(),
+  specId: z.string().optional(),
+  specSectionId: z.string().optional(),
+  title: z.string(),
+  description: z.string(),
+  status: TaskStatusSchema.default("backlog"),
+  priority: TaskPrioritySchema.default("p1"),
+  assignedAgentId: z.string().optional(),
+  dependencies: z.array(z.string()).default([]),
+  sprintId: z.string().optional(),
+  phaseId: z.string().optional(),
+  estimatedComplexity: TaskComplexitySchema.default("medium"),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type Task = z.infer<typeof TaskSchema>;
+
+// --- Sprint ---
+
+export const SprintStatusSchema = z.enum([
+  "planning",
+  "active",
+  "completed",
+]);
+export type SprintStatus = z.infer<typeof SprintStatusSchema>;
+
+export const SprintSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  order: z.number(),
+  status: SprintStatusSchema.default("planning"),
+  taskIds: z.array(z.string()).default([]),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+export type Sprint = z.infer<typeof SprintSchema>;

@@ -25,6 +25,20 @@ export function timeAgo(isoString: string): string {
   return `${Math.floor(diff / 3600)}h ago`;
 }
 
+export function formatRelativeTime(timestamp: string): string {
+  const d = new Date(timestamp);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return "just now";
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return "yesterday";
+  return d.toISOString().slice(0, 10);
+}
+
 export function shortenPath(path: string): string {
   const parts = path.split("/");
   if (parts.length <= 3) return path;

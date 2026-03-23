@@ -262,7 +262,7 @@ export async function runMetaOrchestrator(
       agents: META_ANALYSIS_AGENTS,
       permissionMode: "bypassPermissions",
       allowDangerouslySkipPermissions: true,
-      model: "claude-opus-4-1",
+      model: "claude-opus-4-6",
       cwd: softieDir.projectDir,
       maxTurns: 30,
     },

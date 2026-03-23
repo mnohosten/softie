@@ -19,7 +19,7 @@ export function NewProject({ onStarted }: NewProjectProps) {
     setError(null);
 
     try {
-      const res = await fetch("/api/project/start", {
+      const res = await fetch("/api/project/start-v2", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -86,7 +86,7 @@ export function NewProject({ onStarted }: NewProjectProps) {
             ⟁ Softie
           </div>
           <div style={{ fontSize: "12px", color: "var(--text-muted)", marginTop: "4px" }}>
-            Universal Project Orchestrator
+            Spec-Driven Development
           </div>
         </div>
 
@@ -213,7 +213,7 @@ export function NewProject({ onStarted }: NewProjectProps) {
           {loading ? (
             <>
               <span style={{ animation: "spin 1s linear infinite", display: "inline-block" }}>⟳</span>
-              Analyzing intent...
+              Generating specs...
             </>
           ) : (
             <>⟁ Start Project</>
@@ -227,7 +227,7 @@ export function NewProject({ onStarted }: NewProjectProps) {
             textAlign: "center",
             lineHeight: "1.6",
           }}>
-            Meta-orchestrator is analyzing your intent and designing an expert team.
+            Spec orchestrator is analyzing your intent and generating specifications.
             <br />
             Watch the Activity Feed for live progress.
           </div>

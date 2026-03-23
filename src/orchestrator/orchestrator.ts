@@ -203,7 +203,7 @@ ${contextSummary || "No context files yet. If this is the first implementation p
           agents: sdkAgents,
           permissionMode: "bypassPermissions",
           allowDangerouslySkipPermissions: true,
-          model: "claude-opus-4-1",
+          model: "claude-opus-4-6",
           cwd: softieDir.projectDir,
           maxTurns: 150,
         },

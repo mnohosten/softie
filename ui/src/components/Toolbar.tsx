@@ -1,27 +1,42 @@
 import { useSoftieStore } from "../store/index.ts";
 import { formatCost } from "../utils.ts";
+import type { ViewId } from "../types.ts";
+import { NotificationBell } from "./NotificationBell.tsx";
+
+const VIEW_ITEMS: { id: ViewId; label: string; icon: string }[] = [
+  { id: "dashboard", label: "Dashboard", icon: "◉" },
+  { id: "specs", label: "Specs", icon: "📋" },
+  { id: "board", label: "Board", icon: "▦" },
+  { id: "ide", label: "IDE", icon: "⟁" },
+  { id: "design", label: "Design", icon: "🎨" },
+];
 
 export function Toolbar() {
   const {
     metadata,
-    progress,
     approvalState,
     wsConnected,
-    contextPanelOpen,
     totalCost,
-    toggleContextPanel,
+    activeView,
+    setActiveView,
     setBraveMode,
     setApprovalMode,
+    projectExists,
   } = useSoftieStore();
 
   const statusColors: Record<string, string> = {
     executing: "var(--blue)",
     completed: "var(--green)",
     failed: "var(--red)",
-    analyzing: "var(--yellow)",
-    "team-review": "var(--yellow)",
+    analyzing: "var(--blue)",
+    "spec-review": "var(--yellow)",
+    planning: "var(--blue)",
+    ready: "var(--green)",
+    "sprint-review": "var(--yellow)",
     initializing: "var(--text-muted)",
     paused: "var(--orange)",
+    // v1 compat
+    "team-review": "var(--yellow)",
     "milestone-review": "var(--yellow)",
   };
 
@@ -34,28 +49,38 @@ export function Toolbar() {
     <div className="toolbar">
       <span className="toolbar-logo">⟁ Softie</span>
 
+      {/* View switcher */}
+      {projectExists && (
+        <div className="toolbar-views">
+          {VIEW_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              className={`toolbar-view-btn ${activeView === item.id ? "active" : ""}`}
+              onClick={() => setActiveView(item.id)}
+              title={item.label}
+            >
+              <span className="toolbar-view-icon">{item.icon}</span>
+              <span className="toolbar-view-label">{item.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {metadata && (
-        <>
-          <span className="toolbar-project">{metadata.name || metadata.intent.slice(0, 60)}</span>
-          <div className="toolbar-status">
-            <span
-              className="toolbar-status-dot"
-              style={{ background: statusDotColor }}
-            />
-            <span>{status}</span>
-          </div>
-        </>
+        <div className="toolbar-status">
+          <span
+            className="toolbar-status-dot"
+            style={{ background: statusDotColor }}
+          />
+          <span>{status}</span>
+        </div>
       )}
 
       {costDisplay && (
         <span className="toolbar-cost">{costDisplay}</span>
       )}
 
-      {progress && progress.totalPhases > 0 && (
-        <span style={{ fontSize: "11px", color: "var(--text-muted)" }}>
-          {progress.completedPhases}/{progress.totalPhases} phases
-        </span>
-      )}
+      <NotificationBell />
 
       <div className="toolbar-spacer" />
 
@@ -76,15 +101,7 @@ export function Toolbar() {
         }}
         title="Brave mode: auto-approve all tasks"
       >
-        ⚡ Brave
-      </button>
-
-      <button
-        className={`toolbar-btn ${contextPanelOpen ? "active" : ""}`}
-        onClick={toggleContextPanel}
-        title="Toggle context panel"
-      >
-        ☰ Panel
+        Brave
       </button>
 
       <div

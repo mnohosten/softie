@@ -86,6 +86,71 @@ export interface ApprovalState {
   braveMode: boolean;
 }
 
+// --- Spec (v2) ---
+
+export type SpecType = "product" | "technical" | "architecture" | "api" | "ui";
+export type SpecStatus = "draft" | "review" | "approved" | "implemented";
+
+export interface SpecSection {
+  id: string;
+  title: string;
+  content: string;
+  order: number;
+}
+
+export interface Spec {
+  id: string;
+  title: string;
+  type: SpecType;
+  status: SpecStatus;
+  sections: SpecSection[];
+  filePath: string;
+  linkedTaskIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// --- Task v2 (Board) ---
+
+export type BoardTaskStatus = "backlog" | "todo" | "in-progress" | "review" | "done" | "blocked" | "rejected";
+export type TaskPriority = "p0" | "p1" | "p2";
+export type TaskComplexity = "small" | "medium" | "large";
+
+export interface BoardTask {
+  id: string;
+  specId?: string;
+  specSectionId?: string;
+  title: string;
+  description: string;
+  status: BoardTaskStatus;
+  priority: TaskPriority;
+  assignedAgentId?: string;
+  dependencies: string[];
+  sprintId?: string;
+  phaseId?: string;
+  estimatedComplexity: TaskComplexity;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// --- Sprint ---
+
+export type SprintStatus = "planning" | "active" | "completed";
+
+export interface Sprint {
+  id: string;
+  name: string;
+  order: number;
+  status: SprintStatus;
+  taskIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// --- View ---
+
+export type ViewId = "dashboard" | "specs" | "board" | "ide" | "design";
+
 export interface ProjectState {
   metadata: ProjectMetadata | null;
   team: Team | null;
@@ -93,6 +158,9 @@ export interface ProjectState {
   progress: Progress | null;
   tasks: TaskApproval[];
   approvalState: ApprovalState;
+  specs: Spec[];
+  boardTasks: BoardTask[];
+  sprints: Sprint[];
   exists: boolean;
 }
 
@@ -171,10 +239,22 @@ export type SoftieEvent =
   | { type: "chat:delta"; threadId: string; content: string; timestamp: string }
   | { type: "chat:done"; threadId: string; cost: number; timestamp: string }
   | { type: "sdk:text"; agentName: string; text: string; timestamp: string }
-  | { type: "sdk:tool"; agentName: string; toolName: string; summary: string; timestamp: string };
+  | { type: "sdk:tool"; agentName: string; toolName: string; summary: string; timestamp: string }
+  | { type: "spec:created"; specId: string; title: string; timestamp: string }
+  | { type: "spec:updated"; specId: string; timestamp: string }
+  | { type: "spec:status"; specId: string; status: string; timestamp: string }
+  | { type: "board:task:created"; taskId: string; title: string; timestamp: string }
+  | { type: "board:task:updated"; taskId: string; timestamp: string }
+  | { type: "board:task:status"; taskId: string; status: string; timestamp: string }
+  | { type: "sprint:created"; sprintId: string; name: string; timestamp: string }
+  | { type: "sprint:updated"; sprintId: string; timestamp: string }
+  | { type: "sprint:status"; sprintId: string; status: string; timestamp: string };
 
 export interface WsMilestoneQuestion {
   type: "milestone:question";
   question: string;
   timestamp: string;
 }
+
+// Notification types — re-exported for convenience
+export type { AppNotification, NotificationSeverity } from "./notifications/types.ts";

@@ -11,8 +11,13 @@ import type {
   Activity,
   SelectedItem,
   SoftieEvent,
+  ViewId,
+  Spec,
+  BoardTask,
+  Sprint,
 } from "../types.ts";
 import { randomId } from "../utils.ts";
+import type { AppNotification } from "../notifications/types.ts";
 
 interface SoftieStore {
   // Project data
@@ -24,7 +29,13 @@ interface SoftieStore {
   approvalState: ApprovalState;
   projectExists: boolean;
 
+  // v2 data
+  specs: Spec[];
+  boardTasks: BoardTask[];
+  sprints: Sprint[];
+
   // UI state
+  activeView: ViewId;
   openTabs: Tab[];
   activeTabId: string | null;
   selectedItem: SelectedItem | null;
@@ -49,6 +60,9 @@ interface SoftieStore {
   // Milestone review
   milestoneQuestion: string | null;
 
+  // Notifications
+  notifications: AppNotification[];
+
   // Actions — project data
   setProjectState: (data: {
     metadata?: ProjectMetadata | null;
@@ -57,8 +71,14 @@ interface SoftieStore {
     progress?: Progress | null;
     tasks?: TaskApproval[];
     approvalState?: ApprovalState;
+    specs?: Spec[];
+    boardTasks?: BoardTask[];
+    sprints?: Sprint[];
     exists?: boolean;
   }) => void;
+
+  // Actions — view
+  setActiveView: (view: ViewId) => void;
 
   // Actions — tabs
   openTab: (tab: Omit<Tab, "id">) => void;
@@ -85,6 +105,12 @@ interface SoftieStore {
   setWsConnected: (connected: boolean) => void;
   setMilestoneQuestion: (question: string | null) => void;
 
+  // Actions — notifications
+  addNotification: (notification: AppNotification) => void;
+  markNotificationRead: (id: string) => void;
+  markAllNotificationsRead: () => void;
+  dismissNotification: (id: string) => void;
+
   // Actions — tasks
   setTasks: (tasks: TaskApproval[]) => void;
   approveTask: (taskId: string) => void;
@@ -103,6 +129,13 @@ export const useSoftieStore = create<SoftieStore>((set, get) => ({
   approvalState: { mode: "granular", braveMode: false },
   projectExists: false,
 
+  // v2 data
+  specs: [],
+  boardTasks: [],
+  sprints: [],
+
+  // UI state
+  activeView: "dashboard" as ViewId,
   openTabs: [],
   activeTabId: null,
   selectedItem: null,
@@ -120,6 +153,7 @@ export const useSoftieStore = create<SoftieStore>((set, get) => ({
   wsConnected: false,
   totalCost: 0,
   milestoneQuestion: null,
+  notifications: [],
 
   setProjectState: (data) =>
     set((state) => ({
@@ -129,9 +163,14 @@ export const useSoftieStore = create<SoftieStore>((set, get) => ({
       ...(data.progress !== undefined ? { progress: data.progress } : {}),
       ...(data.tasks !== undefined ? { tasks: data.tasks } : {}),
       ...(data.approvalState !== undefined ? { approvalState: data.approvalState } : {}),
+      ...(data.specs !== undefined ? { specs: data.specs } : {}),
+      ...(data.boardTasks !== undefined ? { boardTasks: data.boardTasks } : {}),
+      ...(data.sprints !== undefined ? { sprints: data.sprints } : {}),
       ...(data.exists !== undefined ? { projectExists: data.exists } : {}),
       totalCost: data.progress?.totalCostUsd ?? state.totalCost,
     })),
+
+  setActiveView: (view) => set({ activeView: view }),
 
   openTab: (tabData) =>
     set((state) => {
@@ -301,6 +340,28 @@ export const useSoftieStore = create<SoftieStore>((set, get) => ({
           : state.milestoneQuestion;
       return { activities, isRunning, currentActivity: activity, fileVersion, milestoneQuestion };
     }),
+
+  addNotification: (notification) =>
+    set((state) => ({
+      notifications: [notification, ...state.notifications].slice(0, 50),
+    })),
+
+  markNotificationRead: (id) =>
+    set((state) => ({
+      notifications: state.notifications.map((n) =>
+        n.id === id ? { ...n, read: true } : n
+      ),
+    })),
+
+  markAllNotificationsRead: () =>
+    set((state) => ({
+      notifications: state.notifications.map((n) => ({ ...n, read: true })),
+    })),
+
+  dismissNotification: (id) =>
+    set((state) => ({
+      notifications: state.notifications.filter((n) => n.id !== id),
+    })),
 
   setWsConnected: (connected) => set({ wsConnected: connected }),
 

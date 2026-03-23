@@ -12,6 +12,8 @@ import { filesRoutes } from "./routes/files.js";
 import { tasksRoutes } from "./routes/tasks.js";
 import { chatRoutes } from "./routes/chat.js";
 import { projectRoutes } from "./routes/project.js";
+import { specRoutes } from "./routes/spec.js";
+import { boardRoutes } from "./routes/board.js";
 import { Logger } from "../utils/logger.js";
 import { runMetaOrchestrator } from "../meta/meta-orchestrator.js";
 import { validateAndIndexTeam } from "../meta/team-generator.js";
@@ -76,6 +78,8 @@ export async function startServer(options: {
     projectDir: options.projectDir,
   });
   await fastify.register(projectRoutes, { softieDir, wsHub });
+  await fastify.register(specRoutes, { softieDir });
+  await fastify.register(boardRoutes, { softieDir });
 
   // Start file watcher if project exists
   if (softieDir.exists) {
